@@ -50,11 +50,11 @@ var ReactTransitionChildMapping = {
     next = next || {};
 
     function getValueForKey(key) {
-      if (next.hasOwnProperty(key)) {
-        return next[key];
-      } else {
+      if (prev[key]) {
         return prev[key];
       }
+
+      return next[key];
     }
 
     // For each key of `next`, the list of keys to insert before that key in

@@ -42,6 +42,7 @@ var ReactTransitionGroup = React.createClass({
     this.currentlyTransitioningKeys = {};
     this.keysToEnter = [];
     this.keysToLeave = [];
+    this.keysToTransition = [];
   },
 
   componentDidMount: function() {
@@ -84,6 +85,13 @@ var ReactTransitionGroup = React.createClass({
       }
     }
 
+    for (key in prevChildMapping) {
+      var hasNext = nextChildMapping && nextChildMapping.hasOwnProperty(key);
+      if (prevChildMapping[key] && hasNext && !this.currentlyTransitioningKeys[key]) {
+        this.keysToTransition.push(key);
+      }
+    }
+
     // If we want to someday check for reordering, we could do it here.
   },
 
@@ -95,6 +103,10 @@ var ReactTransitionGroup = React.createClass({
     var keysToLeave = this.keysToLeave;
     this.keysToLeave = [];
     keysToLeave.forEach(this.performLeave);
+
+    var keysToTransition = this.keysToTransition;
+    this.keysToTransition = [];
+    keysToTransition.forEach(this.performTransition);
   },
 
   performAppear: function(key) {
@@ -198,6 +210,35 @@ var ReactTransitionGroup = React.createClass({
         return {children: newChildren};
       });
     }
+  },
+
+  performTransition: function (key) {
+    this.currentlyTransitioningKeys[key] = true;
+
+    var component = this.refs[key];
+    if (component.componentWillTransition) {
+      component.componentWillTransition(this._handleDoneTransitioning.bind(this, key));
+    } else {
+      this._handleDoneTransitioning(key);
+    }
+  },
+
+  _handleDoneTransitioning: function(key) {
+    var component = this.refs[key];
+
+    if (component.componentDidTransition) {
+      component.componentDidTransition();
+    }
+
+    delete this.currentlyTransitioningKeys[key];
+
+    var currentChildMapping = ReactTransitionChildMapping.getChildMapping(this.props.children);
+
+    this.setState(function (state) {
+      var newChildren = assign({}, state.children);
+      newChildren[key] = currentChildMapping[key];
+      return { children: newChildren };
+    });
   },
 
   render: function() {
